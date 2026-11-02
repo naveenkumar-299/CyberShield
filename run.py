@@ -1,21 +1,20 @@
-"""LoginGuard-SOC Entry Point.
+"""CyberShield SOC Universal Entry Point.
 
 Supports both:
-  1. Standard Flask execution:
+  1. Standard Flask Web Server:
      python run.py
-  2. Streamlit Cloud / Streamlit UI execution:
-     streamlit run run.py  (or streamlit run streamlit_app.py)
+  2. Streamlit Cloud / Streamlit UI:
+     streamlit run run.py (or streamlit run streamlit_app.py)
 """
 import os
 import sys
 from pathlib import Path
 
-# Add project root to sys.path so modules like `app` and `config` are always found
 BASE_DIR = Path(__file__).resolve().parent
 if str(BASE_DIR) not in sys.path:
     sys.path.insert(0, str(BASE_DIR))
 
-# Check if launched inside Streamlit execution environment
+# Detect if executing under Streamlit Cloud / Streamlit CLI
 is_streamlit = False
 try:
     import streamlit.runtime
@@ -24,12 +23,16 @@ try:
 except Exception:
     pass
 
+if not is_streamlit:
+    if any("streamlit" in str(arg).lower() for arg in sys.argv) or os.getenv("STREAMLIT_SERVER_PORT"):
+        is_streamlit = True
+
 if is_streamlit:
-    # Delegate seamlessly to Streamlit SOC dashboard
+    # Delegate directly to standalone Streamlit application
     import streamlit_app
     streamlit_app.main()
 else:
-    # Standard Flask WSGI execution
+    # Standard Flask execution
     from app import create_app
     from app.database.init_db import init_database
 
@@ -37,7 +40,6 @@ else:
 
     if __name__ == "__main__":
         with app.app_context():
-            # Ensure database and provisioned accounts exist
             init_database()
         port = int(os.getenv("PORT", 5000))
         host = os.getenv("HOST", "0.0.0.0")
